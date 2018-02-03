@@ -4,6 +4,7 @@ class ApplicationController < ActionController::API
 
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
   rescue_from Mongoid::Errors::DocumentNotFound, with: :record_not_found
+  rescue_from ActiveRecord::StatementInvalid, with: :record_bad_request
 
   protected
     def record_not_found(exception) 
@@ -13,4 +14,13 @@ class ApplicationController < ActionController::API
       render :json=>payload, :status=>:not_found
       Rails.logger.debug exception.message
     end
+
+    def record_bad_request(exception)
+      payload = {
+        errors: { full_messages:["bad request id[#{params[:id]}]"] }
+      }
+      render :json=>payload, :status=>:bad_request
+      Rails.logger.debug exception.message
+    end
 end
+"#fixed something" 

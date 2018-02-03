@@ -45,6 +45,7 @@ RSpec.feature "ManageFoos", type: :feature, :js=>true do
       expect(page).to have_css("input[name='name'][ng-model*='foo.name']")
       expect(page).to have_css("button[ng-click*='create()']", :text=>"Create Foo")
       expect(page).to have_button("Create Foo")
+      expect(page).to have_button("Create Foo", disabled: true)
     end
 
     scenario "Create button disabled when null name" do
@@ -125,3 +126,4 @@ RSpec.feature "ManageFoos", type: :feature, :js=>true do
 
   end
 end
+"#fixed something" 

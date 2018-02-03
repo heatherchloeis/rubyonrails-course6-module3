@@ -1,0 +1,76 @@
+From 2c714d8e59bbec7843887bc4830da6015aad2b0d Mon Sep 17 00:00:00 2001
+From: Heather Chloe Wallace <heatherchloeis@gmail.com>
+Date: Fri, 2 Feb 2018 16:27:26 -0800
+Subject: [PATCH] Added Assignment Tests
+
+---
+ spec/factories/foobars.rb                      |  4 ++++
+ spec/features/manage_foos_spec.rb              |  8 ++++++++
+ spec/requests/foo_api_error_reportings_spec.rb | 20 ++++++++++++++++++++
+ 3 files changed, 32 insertions(+)
+ create mode 100644 spec/requests/foo_api_error_reportings_spec.rb
+
+diff --git a/spec/factories/foobars.rb b/spec/factories/foobars.rb
+index 51a9cf4..3e57a25 100644
+--- a/spec/factories/foobars.rb
++++ b/spec/factories/foobars.rb
+@@ -8,6 +8,10 @@ FactoryGirl.define do
+     sequence(:name) {|n| "test#{n}" }
+   end
+ 
++  factory :foo_name_sequence, class: 'Foo' do
++    sequence(:name) { |n| "name#{n%10}" }
++  end
++
+   factory :foo_names, class: 'Foo' do
+     sequence(:name) {|n| ["larry", "moe", "curly"][n%3]  }
+   end
+diff --git a/spec/features/manage_foos_spec.rb b/spec/features/manage_foos_spec.rb
+index 397eccb..77f36b3 100644
+--- a/spec/features/manage_foos_spec.rb
++++ b/spec/features/manage_foos_spec.rb
+@@ -47,6 +47,14 @@ RSpec.feature "ManageFoos", type: :feature, :js=>true do
+       expect(page).to have_button("Create Foo")
+     end
+ 
++    scenario "Create button disabled when null name" do
++      expect(page).to have_button("Create Foo", disabled: true)
++    end
++
++    pending "Create button disabled when null name" do
++      expect(page).to have_button("Create Foo", disabled: true)
++    end
++
+     scenario "complete form" do
+       within(:xpath,FOO_FORM_XPATH) do
+         fill_in("name", :with=>foo_state[:name])
+diff --git a/spec/requests/foo_api_error_reportings_spec.rb b/spec/requests/foo_api_error_reportings_spec.rb
+new file mode 100644
+index 0000000..4e71c50
+--- /dev/null
++++ b/spec/requests/foo_api_error_reportings_spec.rb
+@@ -0,0 +1,20 @@
++require 'rails_helper'
++
++RSpec.describe "FooApiErrorReportings", type: :request do
++  include_context 'db_cleanup_each', :transaction
++  
++  context "invalid Foo reports API error" do
++  	let!(:foo_state) { { foo: { id: 1 } } }
++
++  	it do
++  	  jpost foos_path, foo_state
++	  expect(response).to have_http_status(:bad_request) or have_http_status(:unprocessable_entity)
++	  expect(response.content_type).to eq("application/json") 
++
++	  payload=parsed_body
++	  expect(payload).to have_key("errors")
++	  expect(payload["errors"]).to have_key("full_messages")
++	  expect(payload["errors"]["full_messages"][0]).to include("name cannot be null")
++	end
++  end
++end
+\ No newline at end of file
+-- 
+1.9.4.msysgit.2
+

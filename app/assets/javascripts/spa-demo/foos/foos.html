@@ -2,7 +2,7 @@
   <h3>Foos</h3>
   <span>(from spa-demo/foos/foos.html)</span>
 
-  <form>
+  <form novalidate name="fooForm">
     <div>
       <label>Name:</label>
       <input name="name"
@@ -12,12 +12,15 @@
 
     <button ng-if="!foosVM.foo.id" 
              type="submit"
-             ng-click="foosVM.create()">Create Foo</button>  
+             ng-click="foosVM.create()"
+             ng-disable="fooForm.$invalid">Create Foo</button>  
     <div ng-if="foosVM.foo.id">
       <button type="submit"
-              ng-click="foosVM.update()">Update Foo</button>
+              ng-click="foosVM.update()"
+              ng-disable="fooForm.$invalid">Update Foo</button>
       <button type="submit"
-              ng-click="foosVM.remove()">Delete Foo</button>
+              ng-click="foosVM.remove()"
+              ng-disable="fooForm.$invalid">Delete Foo</button>
     </div>               
     </form>
 
