@@ -8,6 +8,10 @@ FactoryGirl.define do
     sequence(:name) {|n| "test#{n}" }
   end
 
+  factory :foo_name_sequence, class: 'Foo' do
+    sequence(:name) { |n| "name#{n%10}" }
+  end
+
   factory :foo_names, class: 'Foo' do
     sequence(:name) {|n| ["larry", "moe", "curly"][n%3]  }
   end
