@@ -1,7 +1,7 @@
 From 2c714d8e59bbec7843887bc4830da6015aad2b0d Mon Sep 17 00:00:00 2001
 From: Heather Chloe Wallace <heatherchloeis@gmail.com>
 Date: Fri, 2 Feb 2018 16:27:26 -0800
-Subject: [PATCH] Added Assignment Tests
+Subject: [PATCH 1/2] Added Assignment Tests
 
 ---
  spec/factories/foobars.rb                      |  4 ++++

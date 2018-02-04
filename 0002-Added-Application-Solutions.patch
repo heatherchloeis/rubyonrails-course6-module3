@@ -1,0 +1,266 @@
+From f3ca0442e69539173ec44cde3c1058fd64903161 Mon Sep 17 00:00:00 2001
+From: Heather Chloe Wallace <heatherchloeis@gmail.com>
+Date: Fri, 2 Feb 2018 16:58:51 -0800
+Subject: [PATCH 2/2] Added Application Solutions
+
+---
+ 0001-Added-Assignment-Tests.patch              | 76 ++++++++++++++++++++++++++
+ app/assets/javascripts/spa-demo/foos/foos.html | 11 ++--
+ app/controllers/application_controller.rb      | 10 ++++
+ app/models/foo.rb                              |  2 +
+ db/schema.rb                                   | 50 ++++++++---------
+ spec/features/manage_foos_spec.rb              |  2 +
+ spec/requests/foo_api_error_reportings_spec.rb | 20 -------
+ 7 files changed, 122 insertions(+), 49 deletions(-)
+ create mode 100644 0001-Added-Assignment-Tests.patch
+
+diff --git a/0001-Added-Assignment-Tests.patch b/0001-Added-Assignment-Tests.patch
+new file mode 100644
+index 0000000..983d707
+--- /dev/null
++++ b/0001-Added-Assignment-Tests.patch
+@@ -0,0 +1,76 @@
++From 2c714d8e59bbec7843887bc4830da6015aad2b0d Mon Sep 17 00:00:00 2001
++From: Heather Chloe Wallace <heatherchloeis@gmail.com>
++Date: Fri, 2 Feb 2018 16:27:26 -0800
++Subject: [PATCH] Added Assignment Tests
++
++---
++ spec/factories/foobars.rb                      |  4 ++++
++ spec/features/manage_foos_spec.rb              |  8 ++++++++
++ spec/requests/foo_api_error_reportings_spec.rb | 20 ++++++++++++++++++++
++ 3 files changed, 32 insertions(+)
++ create mode 100644 spec/requests/foo_api_error_reportings_spec.rb
++
++diff --git a/spec/factories/foobars.rb b/spec/factories/foobars.rb
++index 51a9cf4..3e57a25 100644
++--- a/spec/factories/foobars.rb
+++++ b/spec/factories/foobars.rb
++@@ -8,6 +8,10 @@ FactoryGirl.define do
++     sequence(:name) {|n| "test#{n}" }
++   end
++ 
+++  factory :foo_name_sequence, class: 'Foo' do
+++    sequence(:name) { |n| "name#{n%10}" }
+++  end
+++
++   factory :foo_names, class: 'Foo' do
++     sequence(:name) {|n| ["larry", "moe", "curly"][n%3]  }
++   end
++diff --git a/spec/features/manage_foos_spec.rb b/spec/features/manage_foos_spec.rb
++index 397eccb..77f36b3 100644
++--- a/spec/features/manage_foos_spec.rb
+++++ b/spec/features/manage_foos_spec.rb
++@@ -47,6 +47,14 @@ RSpec.feature "ManageFoos", type: :feature, :js=>true do
++       expect(page).to have_button("Create Foo")
++     end
++ 
+++    scenario "Create button disabled when null name" do
+++      expect(page).to have_button("Create Foo", disabled: true)
+++    end
+++
+++    pending "Create button disabled when null name" do
+++      expect(page).to have_button("Create Foo", disabled: true)
+++    end
+++
++     scenario "complete form" do
++       within(:xpath,FOO_FORM_XPATH) do
++         fill_in("name", :with=>foo_state[:name])
++diff --git a/spec/requests/foo_api_error_reportings_spec.rb b/spec/requests/foo_api_error_reportings_spec.rb
++new file mode 100644
++index 0000000..4e71c50
++--- /dev/null
+++++ b/spec/requests/foo_api_error_reportings_spec.rb
++@@ -0,0 +1,20 @@
+++require 'rails_helper'
+++
+++RSpec.describe "FooApiErrorReportings", type: :request do
+++  include_context 'db_cleanup_each', :transaction
+++  
+++  context "invalid Foo reports API error" do
+++  	let!(:foo_state) { { foo: { id: 1 } } }
+++
+++  	it do
+++  	  jpost foos_path, foo_state
+++	  expect(response).to have_http_status(:bad_request) or have_http_status(:unprocessable_entity)
+++	  expect(response.content_type).to eq("application/json") 
+++
+++	  payload=parsed_body
+++	  expect(payload).to have_key("errors")
+++	  expect(payload["errors"]).to have_key("full_messages")
+++	  expect(payload["errors"]["full_messages"][0]).to include("name cannot be null")
+++	end
+++  end
+++end
++\ No newline at end of file
++-- 
++1.9.4.msysgit.2
++
+diff --git a/app/assets/javascripts/spa-demo/foos/foos.html b/app/assets/javascripts/spa-demo/foos/foos.html
+index 98dbb6a..1c952c3 100644
+--- a/app/assets/javascripts/spa-demo/foos/foos.html
++++ b/app/assets/javascripts/spa-demo/foos/foos.html
+@@ -2,7 +2,7 @@
+   <h3>Foos</h3>
+   <span>(from spa-demo/foos/foos.html)</span>
+ 
+-  <form>
++  <form novalidate name="fooForm">
+     <div>
+       <label>Name:</label>
+       <input name="name"
+@@ -12,12 +12,15 @@
+ 
+     <button ng-if="!foosVM.foo.id" 
+              type="submit"
+-             ng-click="foosVM.create()">Create Foo</button>  
++             ng-click="foosVM.create()"
++             ng-disable="fooForm.$invalid">Create Foo</button>  
+     <div ng-if="foosVM.foo.id">
+       <button type="submit"
+-              ng-click="foosVM.update()">Update Foo</button>
++              ng-click="foosVM.update()"
++              ng-disable="fooForm.$invalid">Update Foo</button>
+       <button type="submit"
+-              ng-click="foosVM.remove()">Delete Foo</button>
++              ng-click="foosVM.remove()"
++              ng-disable="fooForm.$invalid">Delete Foo</button>
+     </div>               
+     </form>
+ 
+diff --git a/app/controllers/application_controller.rb b/app/controllers/application_controller.rb
+index 91d44c0..62f6081 100644
+--- a/app/controllers/application_controller.rb
++++ b/app/controllers/application_controller.rb
+@@ -4,6 +4,7 @@ class ApplicationController < ActionController::API
+ 
+   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
+   rescue_from Mongoid::Errors::DocumentNotFound, with: :record_not_found
++  rescue_from ActiveRecord::StatementInvalid, with: :record_bad_request
+ 
+   protected
+     def record_not_found(exception) 
+@@ -13,4 +14,13 @@ class ApplicationController < ActionController::API
+       render :json=>payload, :status=>:not_found
+       Rails.logger.debug exception.message
+     end
++
++    def record_bad_request(exception)
++      payload = {
++        errors: { full_messages:["bad request id[#{params[:id]}]"] }
++      }
++      render :json=>payload, :status=>:bad_request
++      Rails.logger.debug exception.message
++    end
+ end
++"#fixed something" 
+diff --git a/app/models/foo.rb b/app/models/foo.rb
+index cc3645e..2a46182 100644
+--- a/app/models/foo.rb
++++ b/app/models/foo.rb
+@@ -1,2 +1,4 @@
+ class Foo < ActiveRecord::Base
++  validates :name, presence: true
+ end
++"#fixed something" 
+diff --git a/db/schema.rb b/db/schema.rb
+index dc92fd7..ad27400 100644
+--- a/db/schema.rb
++++ b/db/schema.rb
+@@ -1,25 +1,25 @@
+-# encoding: UTF-8
+-# This file is auto-generated from the current state of the database. Instead
+-# of editing this file, please use the migrations feature of Active Record to
+-# incrementally modify your database, and then regenerate this schema definition.
+-#
+-# Note that this schema.rb definition is the authoritative source for your
+-# database schema. If you need to create the application database on another
+-# system, you should be using db:schema:load, not running all the migrations
+-# from scratch. The latter is a flawed and unsustainable approach (the more migrations
+-# you'll amass, the slower it'll run and the greater likelihood for issues).
+-#
+-# It's strongly recommended that you check this file into your version control system.
+-
+-ActiveRecord::Schema.define(version: 20161222170032) do
+-
+-  # These are extensions that must be enabled in order to support this database
+-  enable_extension "plpgsql"
+-
+-  create_table "foos", force: :cascade do |t|
+-    t.string   "name",       null: false
+-    t.datetime "created_at", null: false
+-    t.datetime "updated_at", null: false
+-  end
+-
+-end
++# encoding: UTF-8
++# This file is auto-generated from the current state of the database. Instead
++# of editing this file, please use the migrations feature of Active Record to
++# incrementally modify your database, and then regenerate this schema definition.
++#
++# Note that this schema.rb definition is the authoritative source for your
++# database schema. If you need to create the application database on another
++# system, you should be using db:schema:load, not running all the migrations
++# from scratch. The latter is a flawed and unsustainable approach (the more migrations
++# you'll amass, the slower it'll run and the greater likelihood for issues).
++#
++# It's strongly recommended that you check this file into your version control system.
++
++ActiveRecord::Schema.define(version: 20161222170032) do
++
++  # These are extensions that must be enabled in order to support this database
++  enable_extension "plpgsql"
++
++  create_table "foos", force: :cascade do |t|
++    t.string   "name",       null: false
++    t.datetime "created_at", null: false
++    t.datetime "updated_at", null: false
++  end
++
++end
+diff --git a/spec/features/manage_foos_spec.rb b/spec/features/manage_foos_spec.rb
+index 77f36b3..62185cc 100644
+--- a/spec/features/manage_foos_spec.rb
++++ b/spec/features/manage_foos_spec.rb
+@@ -45,6 +45,7 @@ RSpec.feature "ManageFoos", type: :feature, :js=>true do
+       expect(page).to have_css("input[name='name'][ng-model*='foo.name']")
+       expect(page).to have_css("button[ng-click*='create()']", :text=>"Create Foo")
+       expect(page).to have_button("Create Foo")
++      expect(page).to have_button("Create Foo", disabled: true)
+     end
+ 
+     scenario "Create button disabled when null name" do
+@@ -125,3 +126,4 @@ RSpec.feature "ManageFoos", type: :feature, :js=>true do
+ 
+   end
+ end
++"#fixed something" 
+diff --git a/spec/requests/foo_api_error_reportings_spec.rb b/spec/requests/foo_api_error_reportings_spec.rb
+index 4e71c50..e69de29 100644
+--- a/spec/requests/foo_api_error_reportings_spec.rb
++++ b/spec/requests/foo_api_error_reportings_spec.rb
+@@ -1,20 +0,0 @@
+-require 'rails_helper'
+-
+-RSpec.describe "FooApiErrorReportings", type: :request do
+-  include_context 'db_cleanup_each', :transaction
+-  
+-  context "invalid Foo reports API error" do
+-  	let!(:foo_state) { { foo: { id: 1 } } }
+-
+-  	it do
+-  	  jpost foos_path, foo_state
+-	  expect(response).to have_http_status(:bad_request) or have_http_status(:unprocessable_entity)
+-	  expect(response.content_type).to eq("application/json") 
+-
+-	  payload=parsed_body
+-	  expect(payload).to have_key("errors")
+-	  expect(payload["errors"]).to have_key("full_messages")
+-	  expect(payload["errors"]["full_messages"][0]).to include("name cannot be null")
+-	end
+-  end
+-end
+\ No newline at end of file
+-- 
+1.9.4.msysgit.2
+
